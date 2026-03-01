@@ -1,0 +1,23 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "finops-operator.fullname" . }}
+  labels:
+    app: {{ include "finops-operator.name" . }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: {{ include "finops-operator.name" . }}
+  template:
+    metadata:
+      labels:
+        app: {{ include "finops-operator.name" . }}
+    spec:
+      serviceAccountName: {{ include "finops-operator.fullname" . }}
+      containers:
+        - name: operator
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          command: ["kopf", "run", "operator.py"]
+          # mount config or secrets if necessary

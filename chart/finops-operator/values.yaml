@@ -1,0 +1,18 @@
+# Default values for finops-operator.
+# Users can override these when installing or upgrading the chart.
+
+image:
+  repository: ghcr.io/my-org/finops-operator
+  tag: "latest"
+  pullPolicy: IfNotPresent
+
+serviceAccount:
+  create: true
+  name: ""
+
+rbac:
+  create: true
+
+annotations: {}
+
+scheduleInterval: 60
