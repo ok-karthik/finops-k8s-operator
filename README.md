@@ -13,13 +13,15 @@ for cost-saving (FinOps) purposes. The operator is written in Python using
 
 ## Building and Publishing the Image
 
-```bash
-# build locally
 docker build -t ghcr.io/<your-org>/finops-operator:0.1.0 .
+docker push ghcr.io/<your-org>/finops-operator:0.1.0
+```bash
+# build locally (replace <version> with whatever tag you intend)
+docker build -t ghcr.io/<your-org>/finops-operator:<version> .
 
 # push to GitHub Container Registry (replace <org> and make sure you are logged in):
 # echo $CR_PAT | docker login ghcr.io -u <username> --password-stdin
-docker push ghcr.io/<your-org>/finops-operator:0.1.0
+docker push ghcr.io/<your-org>/finops-operator:<version>
 ```
 
 You can set `image.repository` and `image.tag` values when installing the
@@ -28,10 +30,10 @@ Helm chart (see below).
 ## Installing with Helm
 
 ```bash
-# add your chart repo or install from local directory
+# install from local chart directory (replace <version> as needed)
 helm install finops-operator ./helm-chart/finops-k8s-operator \
   --set image.repository=ghcr.io/<org>/finops-operator \
-  --set image.tag=0.1.0
+  --set image.tag=<version>
 ```
 
 The chart creates a ServiceAccount, ClusterRole, ClusterRoleBinding, and
@@ -72,12 +74,14 @@ See `tests/` for unit and integration examples (coming soon).
 You can package and publish the chart to GitHub Pages or an OCI registry:
 
 ```bash
-# package locally
+```bash
+# package locally (will create finops-k8s-operator-<chart-version>.tgz)
 helm package helm-chart/finops-k8s-operator
 
 # to an OCI registry (e.g. GitHub Packages):
 helm registry login ghcr.io
-helm push finops-k8s-operator-0.3.0.tgz oci://ghcr.io/<org>/helm-charts
+# replace <chart-version> with the version you just packaged
+helm push finops-k8s-operator-<chart-version>.tgz oci://ghcr.io/<org>/helm-charts
 ```
 
 The GitHub Actions workflow included in this repository will take care of
@@ -88,19 +92,22 @@ tab of your repo or pull it directly:
 
 ```bash
 helm registry login ghcr.io
-helm pull oci://ghcr.io/<org>/helm-charts/finops-operator --version 0.1.0
+helm pull oci://ghcr.io/<org>/helm-charts/finops-operator --version <chart-version>
+
+The workflow also automatically bumps `Chart.yaml` to match the tag and
+commits that change back to `main` so the repository file stays in sync.
 ```
 
 To pull the operator image manually, run:
 
 ```bash
 docker pull ghcr.io/ok-karthik/finops-k8s-operator:latest
-```
+``` (or replace `latest` with a specific tag)
 
 And if you prefer to install the chart from the registry instead of a local
 directory:
 
 ```bash
 helm registry login ghcr.io
-helm install finops-operator oci://ghcr.io/<org>/helm-charts/finops-operator --version 0.1.0
+helm install finops-operator oci://ghcr.io/<org>/helm-charts/finops-operator --version <chart-version>
 ```

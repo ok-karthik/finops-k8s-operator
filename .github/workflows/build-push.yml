@@ -49,6 +49,7 @@ jobs:
         with:
           context: .
           push: true
+          platforms: linux/amd64,linux/arm64
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
 
@@ -65,6 +66,16 @@ jobs:
           VERSION=${GITHUB_REF#refs/tags/v}
           sed -i "s/^version:.*/version: $VERSION/" helm-chart/finops-k8s-operator/Chart.yaml
           git diff helm-chart/finops-k8s-operator/Chart.yaml || true
+
+      - name: Commit version bump
+        if: startsWith(github.ref, 'refs/tags/v')
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "actions@github.com"
+          git commit -am "chore: sync chart version to $VERSION [skip ci]" || true
+          git push origin HEAD:main
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Package Helm chart
         run: |
