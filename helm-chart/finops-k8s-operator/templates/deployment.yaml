@@ -1,20 +1,20 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: {{ include "finops-operator.fullname" . }}
+  name: {{ include "finops-k8s-operator.fullname" . }}
   labels:
-    app: {{ include "finops-operator.name" . }}
+    app: {{ include "finops-k8s-operator.name" . }}
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: {{ include "finops-operator.name" . }}
+      app: {{ include "finops-k8s-operator.name" . }}
   template:
     metadata:
       labels:
-        app: {{ include "finops-operator.name" . }}
+        app: {{ include "finops-k8s-operator.name" . }}
     spec:
-      serviceAccountName: {{ include "finops-operator.fullname" . }}
+      serviceAccountName: {{ include "finops-k8s-operator.fullname" . }}
       containers:
         - name: operator
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"

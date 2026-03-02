@@ -1,4 +1,4 @@
-# Default values for finops-operator.
+# Default values for finops-k8s-operator.
 # Users can override these when installing or upgrading the chart.
 
 image:

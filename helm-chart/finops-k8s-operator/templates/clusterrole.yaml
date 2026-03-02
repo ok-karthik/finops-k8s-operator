@@ -2,7 +2,7 @@
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
-  name: {{ include "finops-operator.fullname" . }}
+  name: {{ include "finops-k8s-operator.fullname" . }}
 rules:
   - apiGroups: [""]
     resources: ["namespaces"]
