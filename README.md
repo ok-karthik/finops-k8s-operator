@@ -79,3 +79,28 @@ helm package chart/finops-operator
 helm registry login ghcr.io
 helm push chart/finops-operator-0.1.0.tgz oci://ghcr.io/<org>/helm-charts
 ```
+
+The GitHub Actions workflow included in this repository will take care of
+building the container image and also packaging/pushing the Helm chart when
+you push a tag (e.g. `v0.1.0`). The chart is stored alongside the images in
+the registry under the `helm-charts` path; you can view it in the **Packages**
+tab of your repo or pull it directly:
+
+```bash
+helm registry login ghcr.io
+helm pull oci://ghcr.io/<org>/helm-charts/finops-operator --version 0.1.0
+```
+
+To pull the operator image manually, run:
+
+```bash
+docker pull ghcr.io/ok-karthik/finops-k8s-operator:latest
+```
+
+And if you prefer to install the chart from the registry instead of a local
+directory:
+
+```bash
+helm registry login ghcr.io
+helm install finops-operator oci://ghcr.io/<org>/helm-charts/finops-operator --version 0.1.0
+```
