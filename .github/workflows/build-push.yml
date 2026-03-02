@@ -62,13 +62,13 @@ jobs:
         if: startsWith(github.ref, 'refs/tags/v')
         run: |
           VERSION=${GITHUB_REF#refs/tags/v}
-          sed -i "s/^version:.*/version: $VERSION/" chart/finops-operator/Chart.yaml
-          git diff chart/finops-operator/Chart.yaml || true
+          sed -i "s/^version:.*/version: $VERSION/" helm-chart/finops-k8s-operator/Chart.yaml
+          git diff helm-chart/finops-k8s-operator/Chart.yaml || true
 
       - name: Package Helm chart
         run: |
-          helm lint chart/finops-operator
-          helm package chart/finops-operator
+          helm lint helm-chart/finops-k8s-operator
+          helm package helm-chart/finops-k8s-operator
 
       - name: Push Helm chart to OCI registry
         env:
@@ -76,4 +76,4 @@ jobs:
           REPO: ${{ github.actor }}/helm-charts      # new base path
         run: |
           helm registry login $REGISTRY --username ${{ github.actor }} --password ${{ secrets.GITHUB_TOKEN }}
-          helm push finops-operator-*.tgz oci://$REGISTRY/$REPO/finops-k8s-operator
+          helm push finops-k8s-operator-*.tgz oci://$REGISTRY/$REPO

@@ -9,7 +9,7 @@ for cost-saving (FinOps) purposes. The operator is written in Python using
 
 - `operator.py` - main operator logic
 - `Dockerfile` - builds the container image
-- `chart/finops-operator` - Helm chart for installing the operator
+- `helm-chart/finops-k8s-operator` - Helm chart for installing the operator
 
 ## Building and Publishing the Image
 
@@ -29,7 +29,7 @@ Helm chart (see below).
 
 ```bash
 # add your chart repo or install from local directory
-helm install finops-operator ./chart/finops-operator \
+helm install finops-operator ./helm-chart/finops-k8s-operator \
   --set image.repository=ghcr.io/<org>/finops-operator \
   --set image.tag=0.1.0
 ```
@@ -73,11 +73,11 @@ You can package and publish the chart to GitHub Pages or an OCI registry:
 
 ```bash
 # package locally
-helm package chart/finops-operator
+helm package helm-chart/finops-k8s-operator
 
 # to an OCI registry (e.g. GitHub Packages):
 helm registry login ghcr.io
-helm push chart/finops-operator-0.1.0.tgz oci://ghcr.io/<org>/helm-charts
+helm push finops-k8s-operator-0.3.0.tgz oci://ghcr.io/<org>/helm-charts
 ```
 
 The GitHub Actions workflow included in this repository will take care of

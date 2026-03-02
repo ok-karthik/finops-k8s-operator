@@ -2,7 +2,7 @@
 # Users can override these when installing or upgrading the chart.
 
 image:
-  repository: ghcr.io/my-org/finops-operator
+  repository: ghcr.io/ok-karthik/finops-k8s-operator
   tag: "latest"
   pullPolicy: IfNotPresent
 
