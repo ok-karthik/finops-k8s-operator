@@ -8,12 +8,26 @@ def configure(settings: kopf.OperatorSettings, **_):
     kubernetes.config.load_incluster_config() # Use in-cluster config when running inside Kubernetes
     print("FinOps Operator Started: Listening for sleep schedule annotations...")
 
-@kopf.timer('v1', 'namespaces', interval=60.0)
+@kopf.timer(
+    'v1',
+    'namespaces',
+    interval=60.0,
+    annotations={'finops-operator/sleep-schedule': kopf.PRESENT},
+    patch=False,                          # don't let kopf mutate the namespace object
+)
 def check_sleep_schedule(spec, name, annotations, logger, **kwargs):
-    # 1. Check if our FinOps annotation exists on this namespace
+    # 1. Skip any Kubernetes control-plane namespaces right away.  These
+    # are never annotated and the service account usually lacks permissions
+    # against them, which otherwise results in noisy forbidden errors.
+    if name in ('kube-system', 'kube-public', 'kube-node-lease',
+                'default', 'finops') or name.startswith('kube-'):
+        return
+
+    # the decorator already filtered to objects that *do* have the
+    # annotation, but we still fetch it to parse the schedule.
     schedule = annotations.get('finops-operator/sleep-schedule')
     if not schedule:
-        return # Skip namespaces without the annotation
+        return  # defensive, should not happen
     
     # 2. Parse the time (e.g., "19:00-08:00")
     try:
@@ -40,10 +54,15 @@ def check_sleep_schedule(spec, name, annotations, logger, **kwargs):
     # 4. Fetch Workloads (Gathering Deployments & StatefulSets)
     workloads = []
     try:
-        # Filter by label selector
-        def should_scale(obj, label_key="finops-operator/scalable"):
+        # Selector helper: check both labels and annotations so users may
+        # choose either form when marking resources as scalable.  The
+        # original version only looked at labels, which caused confusion
+        # when people annotated instead – hence the race condition you saw
+        # earlier.
+        def should_scale(obj, key="finops-operator/scalable"):
             labels = obj.metadata.labels or {}
-            return labels.get(label_key) == "true"
+            anns   = obj.metadata.annotations or {}
+            return labels.get(key) == "true" or anns.get(key) == "true"
         
         # We store a tuple: (Kind, ResourceObject, ApiPatchFunction)
         deployments = apps_api.list_namespaced_deployment(name).items
@@ -97,10 +116,23 @@ def check_sleep_schedule(spec, name, annotations, logger, **kwargs):
     # 6. Iterate through Pods (Audit/Logging)
     try:
         pods = core_api.list_namespaced_pod(name)
-        running_pods = sum(1 for pod in pods.items if pod.status.phase == "Running")
-                
+        # count only pods that are truly running; skip ones already
+        # in the process of terminating (they'll still report phase=Running
+        # until the grace period expires).
+        running_pods = 0
+        for pod in pods.items:
+            if pod.status.phase != "Running":
+                continue
+            if pod.metadata.deletion_timestamp is not None:
+                # pod is being deleted, ignore it
+                continue
+            running_pods += 1
+
         if is_sleep_time and running_pods > 0:
-            logger.warning(f"Audit: Namespace {name} still has {running_pods} running pods during sleep window! (Check exclusions or rogue pods)")
+            logger.warning(
+                f"Audit: Namespace {name} still has {running_pods} running pods "
+                "during sleep window! (Check exclusions or rogue pods)"
+            )
             
     except ApiException as e:
         logger.error(f"Pod error in {name}: {e}")

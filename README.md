@@ -29,6 +29,50 @@ Helm chart (see below).
 
 ## Installing with Helm
 
+### Annotate the namespace schedule
+
+Before the operator can do anything you need to tell it when to sleep.  Add
+an annotation with your desired window (UTC) on the namespace:
+
+```sh
+kubectl annotate ns projectabc finops-operator/sleep-schedule="18:00-07:00"
+```
+
+The controller only runs its timer for namespaces that carry that annotation
+(in addition to the usual 60‑second interval).  It also ignores any namespace
+whose name begins with `kube-` and a handful of other control‑plane
+namespaces, so even though the ClusterRole is cluster‑wide, the operator
+never actively touches the system namespaces.  This behaviour is implemented
+in the Python code and is noted here for security reviewers.
+
+> **RBAC note:** Kopf internally patches the namespace to record its last
+> invocation, so the operator requires `patch` permission on the
+> `namespaces` resource.  The supplied Helm chart now grants `get,list,watch,
+> patch` for namespaces; if you install the chart manually, make sure the
+> ClusterRole/Role has the same verbs.  Namespace filtering is handled in the
+> code; it’s not possible to express an “exclude kube-*” condition in the
+> ClusterRoleBinding itself.
+
+You can update the schedule at any time and the timer will pick it up on the
+next interval.
+
+### Opting workloads into scaling
+
+The operator doesn’t touch every resource in a namespace – you **must** mark
+Deployments and StatefulSets you want to control.  Either a **label** or an
+**annotation** with the key `finops-operator/scalable` set to `"true"` will
+work, e.g.:
+
+```sh
+kubectl label deploy my-app finops-operator/scalable=true
+# or equivalently:
+kubectl annotate deploy my-app finops-operator/scalable=true
+```
+
+Since the operator checks both `metadata.labels` and `metadata.annotations`,
+feel free to use whichever fits your workflow.
+
+
 ```bash
 # install from local chart directory (replace <version> as needed)
 helm install finops-operator ./helm-chart/finops-k8s-operator \
