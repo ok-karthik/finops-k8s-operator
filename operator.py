@@ -21,6 +21,7 @@ def check_sleep_schedule(spec, name, annotations, logger, **kwargs):
     # against them, which otherwise results in noisy forbidden errors.
     if name in ('kube-system', 'kube-public', 'kube-node-lease',
                 'default', 'finops') or name.startswith('kube-'):
+        logger.info(f"Skipping system namespace: {name}")
         return
 
     # the decorator already filtered to objects that *do* have the
