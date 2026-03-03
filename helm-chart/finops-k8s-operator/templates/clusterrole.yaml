@@ -3,10 +3,16 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
   name: {{ include "finops-k8s-operator.fullname" . }}
+# NOTE: this ClusterRole grants permissions cluster‑wide.  Kubernetes RBAC
+# doesn’t have a way to say “grant this role except in kube‑system”, so we
+# can’t really restrict the perms via the RoleBinding itself.  instead, the
+# operator’s timer handler internally skips any namespace whose name starts
+# with "kube-" or is one of the well‑known control‑plane namespaces.  the
+# README documents this behaviour so auditors are aware.
 rules:
   - apiGroups: [""]
     resources: ["namespaces"]
-    verbs: ["get", "list", "watch"]
+    verbs: ["get", "list", "watch", "patch"]
   - apiGroups: ["apps"]
     resources: ["deployments", "statefulsets"]
     verbs: ["get", "list", "patch"]
