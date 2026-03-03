@@ -45,14 +45,17 @@ namespaces, so even though the ClusterRole is cluster‑wide, the operator
 never actively touches the system namespaces.  This behaviour is implemented
 in the Python code and is noted here for security reviewers.
 
-> **RBAC note:** Kopf internally patches the namespace to record its last
-> invocation, so the operator requires `patch` permission on the
-> `namespaces` resource.  The supplied Helm chart now grants `get,list,watch,
-> patch` for namespaces; if you install the chart manually, make sure the
-> ClusterRole/Role has the same verbs.  Namespace filtering is handled in the
-> code; it’s not possible to express an “exclude kube-*” condition in the
-> ClusterRoleBinding itself.
+> **RBAC note:** Kopf patches the namespace object when running a timer, so
+> the operator requires `patch` permission on the `namespaces` resource.  The
+> supplied Helm chart now grants `get,list,watch,patch` for namespaces; if you
+> install the chart manually, make sure the ClusterRole/Role has the same
+> verbs.  Namespace filtering (to skip kube-*) is handled in the code; it’s
+> not possible to express an “exclude kube-*” condition in the ClusterRoleBinding itself.
 
+> **Logging:** Kopf will always log `Timer 'check_sleep_schedule' succeeded`
+> after each invocation, even if the handler returned immediately.  we add an
+> info message when skipping a system namespace so you can distinguish the two
+> cases.
 You can update the schedule at any time and the timer will pick it up on the
 next interval.
 
