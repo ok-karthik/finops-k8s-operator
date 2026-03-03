@@ -13,7 +13,6 @@ def configure(settings: kopf.OperatorSettings, **_):
     'namespaces',
     interval=60.0,
     annotations={'finops-operator/sleep-schedule': kopf.PRESENT},
-    patch=False,                          # don't let kopf mutate the namespace object
 )
 def check_sleep_schedule(spec, name, annotations, logger, **kwargs):
     # 1. Skip any Kubernetes control-plane namespaces right away.  These
