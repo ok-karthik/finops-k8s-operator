@@ -1,5 +1,7 @@
 # FinOps Kubernetes Operator
 
+An automated FinOps operator designed to reduce non-prod cloud compute costs by scaling idle workloads to zero during off-hours.
+
 This repository contains a lightweight Kubernetes operator that scales
 Deployments and StatefulSets down to zero during scheduled "sleep" windows
 for cost-saving (FinOps) purposes. The operator is written in Python using
@@ -11,16 +13,40 @@ for cost-saving (FinOps) purposes. The operator is written in Python using
 - `Dockerfile` - builds the container image
 - `helm-chart/finops-k8s-operator` - Helm chart for installing the operator
 
+## Architecture
+
+```mermaid
+graph TD
+    A[Kubernetes Namespace with sleep-schedule annotation] --> B[Operator Pod]
+    B --> C[Timer triggers every 60s]
+    C --> D{Parse schedule and check current time}
+    D -->|Sleep time| E[Scale down scalable Deployments/StatefulSets to 0 replicas]
+    D -->|Wake time| F[Scale up to original replicas]
+    E --> G[Audit running pods and log warnings]
+    F --> G
+```
+
 ## Building and Publishing the Image
 
-docker build -t ghcr.io/<your-org>/finops-operator:0.1.0 .
-docker push ghcr.io/<your-org>/finops-operator:0.1.0
+For local development, build the image as:
+
 ```bash
-# build locally (replace <version> with whatever tag you intend)
+docker build -t finops-operator .
+```
+
+To pull the latest published image:
+
+```bash
+docker pull ghcr.io/ok-karthik/finops-k8s-operator:0.12
+```
+
+For publishing (replace with your org):
+
+```bash
+# build and tag
 docker build -t ghcr.io/<your-org>/finops-operator:<version> .
 
-# push to GitHub Container Registry (replace <org> and make sure you are logged in):
-# echo $CR_PAT | docker login ghcr.io -u <username> --password-stdin
+# push to GitHub Container Registry (ensure you are logged in):
 docker push ghcr.io/<your-org>/finops-operator:<version>
 ```
 
@@ -79,8 +105,8 @@ feel free to use whichever fits your workflow.
 ```bash
 # install from local chart directory (replace <version> as needed)
 helm install finops-operator ./helm-chart/finops-k8s-operator \
-  --set image.repository=ghcr.io/<org>/finops-operator \
-  --set image.tag=<version>
+  --set image.repository=ghcr.io/ok-karthik/finops-operator \
+  --set image.tag=0.12
 ```
 
 The chart creates a ServiceAccount, ClusterRole, ClusterRoleBinding, and
@@ -128,7 +154,7 @@ helm package helm-chart/finops-k8s-operator
 # to an OCI registry (e.g. GitHub Packages):
 helm registry login ghcr.io
 # replace <chart-version> with the version you just packaged
-helm push finops-k8s-operator-<chart-version>.tgz oci://ghcr.io/<org>/helm-charts
+helm push finops-k8s-operator-<chart-version>.tgz oci://ghcr.io/ok-karthik/helm-charts
 ```
 
 The GitHub Actions workflow included in this repository will take care of
@@ -139,7 +165,7 @@ tab of your repo or pull it directly:
 
 ```bash
 helm registry login ghcr.io
-helm pull oci://ghcr.io/<org>/helm-charts/finops-operator --version <chart-version>
+helm pull oci://ghcr.io/ok-karthik/helm-charts/finops-operator --version 0.12.0
 
 The workflow also automatically bumps `Chart.yaml` to match the tag and
 commits that change back to `main` so the repository file stays in sync.
@@ -148,13 +174,19 @@ commits that change back to `main` so the repository file stays in sync.
 To pull the operator image manually, run:
 
 ```bash
-docker pull ghcr.io/ok-karthik/finops-k8s-operator:latest
-``` (or replace `latest` with a specific tag)
+docker pull ghcr.io/ok-karthik/finops-k8s-operator:0.12
+```
 
-And if you prefer to install the chart from the registry instead of a local
+And for the Helm chart (OCI registry):
+
+```bash
+docker pull ghcr.io/ok-karthik/helm-charts/finops-k8s-operator:0.12.0
+```
+
+If you prefer to install the chart from the registry instead of a local
 directory:
 
 ```bash
 helm registry login ghcr.io
-helm install finops-operator oci://ghcr.io/<org>/helm-charts/finops-operator --version <chart-version>
+helm install finops-operator oci://ghcr.io/ok-karthik/helm-charts/finops-operator --version 0.12.0
 ```
