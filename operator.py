@@ -7,6 +7,7 @@ from datetime import datetime, timezone
 def configure(settings: kopf.OperatorSettings, **_):
     kubernetes.config.load_incluster_config() # Use in-cluster config when running inside Kubernetes
     print("FinOps Operator Started: Listening for sleep schedule annotations...")
+    print("i.e., annotate a namespace with 'finops-operator/sleep-schedule: \"19:00-08:00\"' to enable sleeping/scaledown. Time format is 24-hour HH:MM in UTC. Adjust times as needed for your timezone.")
 
 @kopf.timer(
     'v1',
@@ -18,8 +19,7 @@ def check_sleep_schedule(spec, name, annotations, logger, **kwargs):
     # 1. Skip any Kubernetes control-plane namespaces right away.  These
     # are never annotated and the service account usually lacks permissions
     # against them, which otherwise results in noisy forbidden errors.
-    if name in ('kube-system', 'kube-public', 'kube-node-lease',
-                'default', 'finops') or name.startswith('kube-'):
+    if name in ('kube-system', 'kube-public', 'kube-node-lease'):
         logger.info(f"Skipping system namespace: {name}")
         return
 
