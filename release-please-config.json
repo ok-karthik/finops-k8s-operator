@@ -1,0 +1,11 @@
+{
+  "packages": {
+    ".": {
+      "release-type": "simple",
+      "extra-files": [
+        "README.md",
+        "helm-chart/finops-k8s-operator/Chart.yaml"
+      ]
+    }
+  }
+}

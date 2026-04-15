@@ -21,40 +21,22 @@ A lightweight, high-performance Kubernetes operator designed to radically reduce
 
 ## 🏗 Architecture
 
-### High-Level Architecture
+### High-Level Concept
 
-The operator operates continuously against the Kubernetes API, monitoring namespaces for predefined scheduling annotations and reconciling workload states to ensure adherence to cost-saving profiles.
+This visualizes the core **Opt-Out** FinOps mechanism. A single annotation on a namespace dictates the behavior of all non-critical compute workloads within it.
 
 ```mermaid
 graph TD
-    classDef k8s fill:#326ce5,stroke:#fff,stroke-width:2px,color:#fff;
-    classDef op fill:#2ecc71,stroke:#fff,stroke-width:2px,color:#fff;
+    classDef time fill:#f39c12,stroke:#d35400,stroke-width:2px,color:#fff;
+    classDef action fill:#3498db,stroke:#2980b9,stroke-width:2px,color:#fff;
+    classDef exception fill:#e74c3c,stroke:#c0392b,stroke-width:2px,color:#fff;
+
+    A[Namespace: QA Environment<br/>schedule: 19:00-08:00] -->|Operator observes| B{Current Time?}:::time
     
-    API[Kubernetes API Server]:::k8s
-    O[FinOps Operator]:::op
+    B -->|Night time 💤| C[Scale ALL Workloads to 0]:::action
+    B -->|Day time ☀️| D[Restore Workloads to Original]:::action
     
-    subgraph Cluster[Kubernetes Cluster]
-        subgraph NSA [Namespace: dev-backend]
-            D1[Deployments]
-            S1[StatefulSets]
-            P1[Pods]
-        end
-        
-        subgraph NSB [Namespace: qa-frontend]
-            D2[Deployments]
-            S2[StatefulSets]
-            P2[Pods]
-        end
-    end
-    
-    O -->|1. Watch & Analyze Schedules| API
-    API -->|2. Return Target Namespaces| O
-    O -->|3. Query Scalable Workloads| API
-    API -->|4. Target Resouces| O
-    O -->|5. Patch Replicas| API
-    
-    API -.-> D1 & S1
-    API -.-> D2 & S2
+    C -.-> E[⚠️ Exception: critical-worker<br/>Annotation: exclude=true<br/>Stays Running!]:::exception
 ```
 
 ---
@@ -116,7 +98,7 @@ kubectl annotate ns dev-environment finops-operator/sleep-schedule="19:00-08:00"
 The operator proactively ignores any namespace whose name belongs to standard control plane resources (`kube-system`, `kube-node-lease`, `kube-public`) even if annotated.
 
 ### 2. Exemptions / Exclusions
-If a specific workload within an activated namespace needs to stay up (e.g. a worker node processing long queues or a database), you must explicitly exclude it:
+If a specific workload within an activated namespace needs to stay up (e.g. a worker node processing long queues or a database), you must explicitly exclude it with `finops-operator/exclude: "true"` annotation like below:
 
 ```yaml
 apiVersion: apps/v1
@@ -138,6 +120,7 @@ metadata:
 
 ### Building the Image
 
+<!-- x-release-please-start-version -->
 ```bash
 docker build -t ghcr.io/<your-org>/finops-operator:0.12.0 .
 docker push ghcr.io/<your-org>/finops-operator:0.12.0
@@ -147,19 +130,23 @@ To pull the latest published image:
 ```bash
 docker pull ghcr.io/ok-karthik/finops-k8s-operator:0.12.0
 ```
+<!-- x-release-please-end -->
 
 ### Helm Installation
 
 You can install the chart directly from the OCI registry:
+<!-- x-release-please-start-version -->
 ```bash
 helm registry login ghcr.io
 helm install finops-operator oci://ghcr.io/ok-karthik/helm-charts/finops-operator --version 0.12.0
 ```
+<!-- x-release-please-end -->
 
 #### Configuration Options
 
 Customize via `values.yaml` or `--set` flags:
 
+<!-- x-release-please-start-version -->
 | Value                      | Description                         | Default                  |
 |---------------------------|-------------------------------------|--------------------------|
 | `image.repository`        | Container image to run              | `ghcr.io/ok-karthik/finops-operator` |
@@ -169,6 +156,7 @@ Customize via `values.yaml` or `--set` flags:
 | `rbac.create`             | Create RBAC resources               | `true`                   |
 | `annotations`             | Annotations on SA/deployment        | `{}`                     |
 | `scheduleInterval`        | Kopf timer interval (seconds)       | `60`                     |
+<!-- x-release-please-end -->
 
 > **RBAC note:** Kopf patches the namespace object when running a timer, so the operator requires `patch` permission on the `namespaces` resource. The supplied Helm chart grants `get,list,watch,patch` for namespaces. 
 
@@ -190,6 +178,7 @@ kopf run operator.py --verbose
 
 You can package and publish the chart to an OCI registry (e.g. GitHub Packages):
 
+<!-- x-release-please-start-version -->
 ```bash
 # package locally (will create finops-k8s-operator-<chart-version>.tgz)
 helm package helm-chart/finops-k8s-operator
@@ -200,6 +189,7 @@ helm push finops-k8s-operator-<chart-version>.tgz oci://ghcr.io/ok-karthik/helm-
 ```
 
 The GitHub Actions workflow included in this repository will take care of building the container image and also packaging/pushing the Helm chart when you push a tag (e.g. `v0.12.0`).
+<!-- x-release-please-end -->
 
 ## 🤝 Testing & Contributing
 
