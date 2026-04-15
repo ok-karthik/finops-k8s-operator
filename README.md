@@ -87,10 +87,11 @@ sequenceDiagram
 To have the operator manage your resources, simply apply the necessary annotations and labels:
 
 ### 1. Activating a Namespace
-Before the operator can do anything you need to tell it when to sleep. Add an annotation with your desired window (UTC) on the namespace:
+You need to tell the finops-operator what namespaces workloads to scale down and when to scale them back up. Add an annotation with your desired window (UTC) on the namespace:
+For example, if you want to scale down workloads in the `default` namespace from 7 PM to 8 AM UTC, you would add the following annotation:
 
 ```sh
-kubectl annotate ns dev-environment finops-operator/sleep-schedule="19:00-08:00"
+kubectl annotate ns default finops-operator/sleep-schedule="19:00-08:00"
 ```
 
 > **Warning - Opt-Out Architecture:** Once a namespace is activated, **EVERY** Deployment and StatefulSet inside it will be scaled down during the sleep window by default.
@@ -122,7 +123,7 @@ The fastest way to get started is to use the officially published Helm Chart and
 
 <!-- x-release-please-start-version -->
 ```bash
-helm install finops-operator oci://ghcr.io/ok-karthik/helm-charts/finops-k8s-operator --version 0.13.1
+helm install finops-operator oci://ghcr.io/ok-karthik/helm-charts/finops-k8s-operator --version 0.13.1 -n finops-operator --create-namespace
 ```
 <!-- x-release-please-end -->
 
@@ -145,7 +146,7 @@ docker pull ghcr.io/ok-karthik/finops-k8s-operator:0.13.1
 **2. Helm Installation (Local Chart Directory)**
 
 ```bash
-helm install finops-operator ./helm-chart/finops-k8s-operator
+helm install finops-operator ./helm-chart/finops-k8s-operator -n finops-operator --create-namespace
 ```
 
 #### Configuration Options
@@ -200,3 +201,19 @@ The GitHub Actions workflow included in this repository will take care of buildi
 ## 🤝 Testing & Contributing
 
 See `tests/` for unit and integration examples. Testing framework is currently under active development. Feel free to open a PR!
+
+---
+
+## 🔍 Operator in Action
+
+Here is an example of what the operator logs look like when a sleep window activates and gracefully scales down workloads (while warning about rogue pods!):
+
+```text
+[2026-04-15 14:33:52,373] kopf.activities.star [INFO    ] Activity 'configure' succeeded.
+[2026-04-15 14:33:52,373] kopf._core.engines.a [INFO    ] Initial authentication has been initiated.
+[2026-04-15 14:35:44,170] kopf.objects         [INFO    ] [crossplane-system] Sleeping Deployment: crossplane -> 0
+[2026-04-15 14:35:44,192] kopf.objects         [INFO    ] [crossplane-system] Sleeping Deployment: crossplane-rbac-manager -> 0
+[2026-04-15 14:35:44,219] kopf.objects         [INFO    ] [crossplane-system] Sleeping Deployment: upbound-provider-family-aws -> 0
+[2026-04-15 14:35:44,433] kopf.objects         [WARNING ] [crossplane-system] Audit: Namespace crossplane-system still has 1 running pods during sleep window! (Check exclusions or rogue pods)
+[2026-04-15 14:35:44,452] kopf.objects         [INFO    ] [crossplane-system] Timer 'check_sleep_schedule' succeeded.
+```
