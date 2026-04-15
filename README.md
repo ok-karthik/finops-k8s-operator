@@ -76,9 +76,8 @@ sequenceDiagram
         O-->>K: Yield Processing
     else Schedule Valid
         O->>O: Calculate Active Time Window
-        O->>API: List Deployments/StatefulSets
+        O->>API: List All Deployments/StatefulSets
         API-->>O: Return Workloads
-        O->>O: Filter Workloads (label/annotation = finops-operator/scalable=true)
         
         loop Per Workload Evaluation
             alt Excluded via Annotation
@@ -112,29 +111,18 @@ Before the operator can do anything you need to tell it when to sleep. Add an an
 kubectl annotate ns dev-environment finops-operator/sleep-schedule="19:00-08:00"
 ```
 
-The operator ignores any namespace whose name belongs to standard control plane resources (`kube-system`, `kube-node-lease`, `kube-public`) even if annotated.
+> **Warning - Opt-Out Architecture:** Once a namespace is activated, **EVERY** Deployment and StatefulSet inside it will be scaled down during the sleep window by default.
 
-### 2. Targeting Workloads
-The operator doesn’t touch every resource in a namespace – you **must** mark Deployments and StatefulSets you want to control. Either a **label** or an **annotation** with the key `finops-operator/scalable` set to `"true"` will work, e.g.:
+The operator proactively ignores any namespace whose name belongs to standard control plane resources (`kube-system`, `kube-node-lease`, `kube-public`) even if annotated.
 
-```sh
-kubectl label deploy my-backend finops-operator/scalable=true
-# or equivalently:
-kubectl annotate deploy my-backend finops-operator/scalable=true
-```
-
-Since the operator checks both `metadata.labels` and `metadata.annotations`, feel free to use whichever fits your workflow.
-
-### 3. Exemptions / Exclusions
-If a specific workload within a managed namespace needs to stay up (e.g. a worker node processing long queues), exclude it:
+### 2. Exemptions / Exclusions
+If a specific workload within an activated namespace needs to stay up (e.g. a worker node processing long queues or a database), you must explicitly exclude it:
 
 ```yaml
 apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: critical-worker
-  labels:
-    finops-operator/scalable: "true"
   annotations:
     finops-operator/exclude: "true"
 ```

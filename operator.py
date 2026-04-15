@@ -59,21 +59,14 @@ def check_sleep_schedule(spec, name, annotations, logger, **kwargs):
 
     # 4. Fetch Workloads (Gathering Deployments & StatefulSets)
     workloads = []
-    # Performance Optimization: Use label_selector to let the API server filter resources
-        # Selector helper: check both labels and annotations so users may
-        # choose either form when marking resources as scalable.
-        def should_scale(obj, key="finops-operator/scalable"):
-            labels = obj.metadata.labels or {}
-            anns   = obj.metadata.annotations or {}
-            return labels.get(key) == "true" or anns.get(key) == "true"
-        
+    
+    try:
         # We store a tuple: (Kind, ResourceObject, ApiPatchFunction)
+        # Opt-out model: Fetch everything in the namespace. We will only skip those with explicit exclude annotations.
         deployments = apps_api.list_namespaced_deployment(name).items
-        deployments = [d for d in deployments if should_scale(d)]
         workloads.extend([("Deployment", obj, apps_api.patch_namespaced_deployment) for obj in deployments])
         
         statefulsets = apps_api.list_namespaced_stateful_set(name).items
-        statefulsets = [s for s in statefulsets if should_scale(s)]
         workloads.extend([("StatefulSet", obj, apps_api.patch_namespaced_stateful_set) for obj in statefulsets])
     except ApiException as e:
         logger.error(f"Error fetching workloads in {name}: {e}")
