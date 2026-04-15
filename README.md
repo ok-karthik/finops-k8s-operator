@@ -123,7 +123,7 @@ The fastest way to get started is to use the officially published Helm Chart and
 
 <!-- x-release-please-start-version -->
 ```bash
-helm install finops-operator oci://ghcr.io/ok-karthik/helm-charts/finops-k8s-operator --version 0.13.3 -n finops-operator --create-namespace
+helm install finops-operator oci://ghcr.io/ok-karthik/helm-charts/finops-k8s-operator --version 1.0.0 -n finops-operator --create-namespace
 ```
 <!-- x-release-please-end -->
 
@@ -133,13 +133,13 @@ If you wish to fork, develop, and publish the operator to your own internal ente
 **1. Building the Image**
 <!-- x-release-please-start-version -->
 ```bash
-docker build -t ghcr.io/<your-org>/finops-operator:0.13.3 .
-docker push ghcr.io/<your-org>/finops-operator:0.13.3
+docker build -t ghcr.io/<your-org>/finops-operator:1.0.0 .
+docker push ghcr.io/<your-org>/finops-operator:1.0.0
 ```
 
 To pull the latest published image directly:
 ```bash
-docker pull ghcr.io/ok-karthik/finops-k8s-operator:0.13.3
+docker pull ghcr.io/ok-karthik/finops-k8s-operator:1.0.0
 ```
 <!-- x-release-please-end -->
 
@@ -157,7 +157,7 @@ Customize via `values.yaml` or `--set` flags:
 | Value                      | Description                         | Default                  |
 |---------------------------|-------------------------------------|--------------------------|
 | `image.repository`        | Container image to run              | `ghcr.io/ok-karthik/finops-operator` |
-| `image.tag`               | Image tag                           | `0.13.3`                 |
+| `image.tag`               | Image tag                           | `1.0.0`                 |
 | `image.pullPolicy`        | Image pull policy                   | `IfNotPresent`           |
 | `serviceAccount.create`   | Whether to create a SA              | `true`                   |
 | `rbac.create`             | Create RBAC resources               | `true`                   |
@@ -216,4 +216,34 @@ Here is an example of what the operator logs look like when a sleep window activ
 [14:35:44,219] kopf.objects         [INFO    ] [crossplane-system] Sleeping Deployment: upbound-provider-family-aws -> 0
 [14:35:44,433] kopf.objects         [WARNING ] [crossplane-system] Audit: Namespace crossplane-system still has 1 running pods!
 [14:35:44,452] kopf.objects         [INFO    ] [crossplane-system] Timer 'check_sleep_schedule' succeeded.
+```
+
+---
+
+## ⚡ Performance & Efficiency
+
+The operator is designed to be extremely "thrifty," ensuring that the tool you use to save money doesn't cost you money to run.
+
+- **Footprint**: Consumes **< 1m CPU** and **< 100Mi Memory** in a standard production environment with hundreds of workloads.
+- **API Efficiency**: Uses server-side `field_selector` filtering to reduce Kubernetes API traffic and memory overhead.
+
+```bash
+❯ kubectl top pod -n finops-operator
+NAME                               CPU(cores)   MEMORY(bytes)
+finops-operator-7cdb459d66-zxpjj   1m           99Mi
+```
+
+---
+
+## ⚡ Performance & Efficiency
+
+The operator is designed to be extremely "thrifty," ensuring that the tool you use to save money doesn't cost you money to run.
+
+- **Footprint**: Consumes **< 1m CPU** and **< 100Mi Memory** in a standard production environment with hundreds of workloads.
+- **API Efficiency**: Uses server-side `field_selector` filtering to reduce Kubernetes API traffic and memory overhead.
+
+```bash
+❯ kubectl top pod -n finops-operator
+NAME                               CPU(cores)   MEMORY(bytes)
+finops-operator-7cdb459d66-zxpjj   1m           99Mi
 ```
