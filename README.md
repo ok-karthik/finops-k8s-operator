@@ -122,7 +122,7 @@ The fastest way to get started is to use the officially published Helm Chart and
 
 <!-- x-release-please-start-version -->
 ```bash
-helm install finops-operator oci://ghcr.io/ok-karthik/helm-charts/finops-k8s-operator --version 0.13.0
+helm install finops-operator oci://ghcr.io/ok-karthik/helm-charts/finops-k8s-operator --version 0.13.1
 ```
 <!-- x-release-please-end -->
 
@@ -132,13 +132,13 @@ If you wish to fork, develop, and publish the operator to your own internal ente
 **1. Building the Image**
 <!-- x-release-please-start-version -->
 ```bash
-docker build -t ghcr.io/<your-org>/finops-operator:0.13.0 .
-docker push ghcr.io/<your-org>/finops-operator:0.13.0
+docker build -t ghcr.io/<your-org>/finops-operator:0.13.1 .
+docker push ghcr.io/<your-org>/finops-operator:0.13.1
 ```
 
 To pull the latest published image directly:
 ```bash
-docker pull ghcr.io/ok-karthik/finops-k8s-operator:0.13.0
+docker pull ghcr.io/ok-karthik/finops-k8s-operator:0.13.1
 ```
 <!-- x-release-please-end -->
 
@@ -156,7 +156,7 @@ Customize via `values.yaml` or `--set` flags:
 | Value                      | Description                         | Default                  |
 |---------------------------|-------------------------------------|--------------------------|
 | `image.repository`        | Container image to run              | `ghcr.io/ok-karthik/finops-operator` |
-| `image.tag`               | Image tag                           | `0.13.0`                 |
+| `image.tag`               | Image tag                           | `0.13.1`                 |
 | `image.pullPolicy`        | Image pull policy                   | `IfNotPresent`           |
 | `serviceAccount.create`   | Whether to create a SA              | `true`                   |
 | `rbac.create`             | Create RBAC resources               | `true`                   |
@@ -194,7 +194,7 @@ helm registry login ghcr.io
 helm push finops-k8s-operator-<chart-version>.tgz oci://ghcr.io/ok-karthik/helm-charts
 ```
 
-The GitHub Actions workflow included in this repository will take care of building the container image and also packaging/pushing the Helm chart when you push a tag (e.g. `v0.13.0`).
+The GitHub Actions workflow included in this repository will take care of building the container image and also packaging/pushing the Helm chart when you push a tag (e.g. `v0.13.1`).
 <!-- x-release-please-end -->
 
 ## 🤝 Testing & Contributing
