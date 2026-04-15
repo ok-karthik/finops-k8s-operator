@@ -1,192 +1,218 @@
-# FinOps Kubernetes Operator
+# 🌿 FinOps Kubernetes Operator
 
-An automated FinOps operator designed to reduce non-prod cloud compute costs by scaling idle workloads to zero during off-hours.
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
+[![Python: 3.12](https://img.shields.io/badge/Python-3.12-blue?logo=python&logoColor=white)](https://python.org)
+[![Kubernetes](https://img.shields.io/badge/kubernetes-operator-%23326ce5.svg?logo=kubernetes&logoColor=white)](https://kubernetes.io/)
 
-This repository contains a lightweight Kubernetes operator that scales
-Deployments and StatefulSets down to zero during scheduled "sleep" windows
-for cost-saving (FinOps) purposes. The operator is written in Python using
-[Kopf](https://kopf.readthedocs.io/).
+A lightweight, high-performance Kubernetes operator designed to radically reduce cloud costs by intelligently scaling down non-production workloads (Deployments and StatefulSets) during designated "sleep" windows (e.g., nights and weekends). Built with [Kopf](https://kopf.readthedocs.io/), it embraces GitOps and declarative infrastructure principles to seamlessly blend into modern platform engineering ecosystems.
 
-## Components
+---
 
-- `operator.py` - main operator logic
-- `Dockerfile` - builds the container image
-- `helm-chart/finops-k8s-operator` - Helm chart for installing the operator
+## 🚀 Key Features
 
-## Architecture
+*   **Declarative Schedules**: Control down-scaling natively via Kubernetes annotations on Namespaces.
+*   **High Performance**: Leverages deep Kubernetes API server-side filtering (`field_selector`) instead of computationally expensive client-side loops for pods.
+*   **Granular Exclusions**: Developers can opt-out specific workloads, ensuring mission-critical pods stay up even in "sleep" namespaces.
+*   **Safe by Design**: Automatically skips system namespaces (`kube-system`, `kube-public`, `kube-node-lease`) and works gracefully alongside workloads undergoing termination.
+*   **Audit Logging**: Actively scans for rogue running pods during sleep windows and tracks anomalies.
+*   **Local & Cluster Ready**: Gracefully falls back to local `kubeconfig` during local development without manual intervention.
+
+---
+
+## 🏗 Architecture
+
+### High-Level Architecture
+
+The operator operates continuously against the Kubernetes API, monitoring namespaces for predefined scheduling annotations and reconciling workload states to ensure adherence to cost-saving profiles.
 
 ```mermaid
 graph TD
-    A[Kubernetes Namespace with sleep-schedule annotation] --> B[Operator Pod]
-    B --> C[Timer triggers every 60s]
-    C --> D{Parse schedule and check current time}
-    D -->|Sleep time| E[Scale down scalable Deployments/StatefulSets to 0 replicas]
-    D -->|Wake time| F[Scale up to original replicas]
-    E --> G[Audit running pods and log warnings]
-    F --> G
+    classDef k8s fill:#326ce5,stroke:#fff,stroke-width:2px,color:#fff;
+    classDef op fill:#2ecc71,stroke:#fff,stroke-width:2px,color:#fff;
+    
+    API[Kubernetes API Server]:::k8s
+    O[FinOps Operator]:::op
+    
+    subgraph Cluster[Kubernetes Cluster]
+        subgraph NSA [Namespace: dev-backend]
+            D1[Deployments]
+            S1[StatefulSets]
+            P1[Pods]
+        end
+        
+        subgraph NSB [Namespace: qa-frontend]
+            D2[Deployments]
+            S2[StatefulSets]
+            P2[Pods]
+        end
+    end
+    
+    O -->|1. Watch & Analyze Schedules| API
+    API -->|2. Return Target Namespaces| O
+    O -->|3. Query Scalable Workloads| API
+    API -->|4. Target Resouces| O
+    O -->|5. Patch Replicas| API
+    
+    API -.-> D1 & S1
+    API -.-> D2 & S2
 ```
 
-## Building and Publishing the Image
+---
 
-For local development, build the image as:
+### Internal operator Logic Flow
+
+Under the hood, the operator utilizes a unified scaling engine to iteratively evaluate conditions within the target bounds while prioritizing graceful state preservation.
+
+```mermaid
+sequenceDiagram
+    participant K as Kopf Framework
+    participant O as FinOps Scaling Engine
+    participant API as Kubernetes API Server
+    
+    K->>O: Trigger Evaluation Timer (Every 60s)
+    O->>O: Extract 'finops-operator/sleep-schedule'
+    
+    alt Schedule Missing or System Namespace
+        O-->>K: Yield Processing
+    else Schedule Valid
+        O->>O: Calculate Active Time Window
+        O->>API: List Deployments/StatefulSets
+        API-->>O: Return Workloads
+        O->>O: Filter Workloads (label/annotation = finops-operator/scalable=true)
+        
+        loop Per Workload Evaluation
+            alt Excluded via Annotation
+                O-->>O: Bypass Workload
+            else Time == Sleep AND Replicas > 0
+                O->>API: Patch Workload (Replicas -> 0)<br/>Store Original Count
+            else Time == Wake AND Replicas == 0
+                O->>O: Retrieve Original Count
+                O->>API: Patch Workload (Replicas -> Original Count)
+            end
+        end
+        
+        O->>API: List Pods<br/>(field_selector=status.phase=Running)
+        API-->>O: Return Running Pod Count (Ignoring terminating pods)
+        alt Time == Sleep AND Pods > 0
+            O-->>O: Generate Audit Warning (Rogue Pods)
+        end
+    end
+```
+
+---
+
+## 💻 Usage & Annotations
+
+To have the operator manage your resources, simply apply the necessary annotations and labels:
+
+### 1. Activating a Namespace
+Before the operator can do anything you need to tell it when to sleep. Add an annotation with your desired window (UTC) on the namespace:
+
+```sh
+kubectl annotate ns dev-environment finops-operator/sleep-schedule="19:00-08:00"
+```
+
+The operator ignores any namespace whose name belongs to standard control plane resources (`kube-system`, `kube-node-lease`, `kube-public`) even if annotated.
+
+### 2. Targeting Workloads
+The operator doesn’t touch every resource in a namespace – you **must** mark Deployments and StatefulSets you want to control. Either a **label** or an **annotation** with the key `finops-operator/scalable` set to `"true"` will work, e.g.:
+
+```sh
+kubectl label deploy my-backend finops-operator/scalable=true
+# or equivalently:
+kubectl annotate deploy my-backend finops-operator/scalable=true
+```
+
+Since the operator checks both `metadata.labels` and `metadata.annotations`, feel free to use whichever fits your workflow.
+
+### 3. Exemptions / Exclusions
+If a specific workload within a managed namespace needs to stay up (e.g. a worker node processing long queues), exclude it:
+
+```yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: critical-worker
+  labels:
+    finops-operator/scalable: "true"
+  annotations:
+    finops-operator/exclude: "true"
+```
+
+---
+
+## 🛠 Installation & Setup
+
+### Requirements
+* A Kubernetes Cluster
+* Helm 3.x
+* Docker (for building locally)
+
+### Building the Image
 
 ```bash
-docker build -t finops-operator .
+docker build -t ghcr.io/<your-org>/finops-operator:0.12.0 .
+docker push ghcr.io/<your-org>/finops-operator:0.12.0
 ```
 
 To pull the latest published image:
-
 ```bash
-docker pull ghcr.io/ok-karthik/finops-k8s-operator:0.12
+docker pull ghcr.io/ok-karthik/finops-k8s-operator:0.12.0
 ```
 
-For publishing (replace with your org):
+### Helm Installation
 
+You can install the chart directly from the OCI registry:
 ```bash
-# build and tag
-docker build -t ghcr.io/<your-org>/finops-operator:<version> .
-
-# push to GitHub Container Registry (ensure you are logged in):
-docker push ghcr.io/<your-org>/finops-operator:<version>
+helm registry login ghcr.io
+helm install finops-operator oci://ghcr.io/ok-karthik/helm-charts/finops-operator --version 0.12.0
 ```
 
-You can set `image.repository` and `image.tag` values when installing the
-Helm chart (see below).
-
-## Installing with Helm
-
-### Annotate the namespace schedule
-
-Before the operator can do anything you need to tell it when to sleep.  Add
-an annotation with your desired window (UTC) on the namespace:
-
-```sh
-kubectl annotate ns projectabc finops-operator/sleep-schedule="18:00-07:00"
-```
-
-The controller only runs its timer for namespaces that carry that annotation
-(in addition to the usual 60‑second interval).  It also ignores any namespace
-whose name begins with `kube-` and a handful of other control‑plane
-namespaces, so even though the ClusterRole is cluster‑wide, the operator
-never actively touches the system namespaces.  This behaviour is implemented
-in the Python code and is noted here for security reviewers.
-
-> **RBAC note:** Kopf patches the namespace object when running a timer, so
-> the operator requires `patch` permission on the `namespaces` resource.  The
-> supplied Helm chart now grants `get,list,watch,patch` for namespaces; if you
-> install the chart manually, make sure the ClusterRole/Role has the same
-> verbs.  Namespace filtering (to skip kube-*) is handled in the code; it’s
-> not possible to express an “exclude kube-*” condition in the ClusterRoleBinding itself.
-
-> **Logging:** Kopf will always log `Timer 'check_sleep_schedule' succeeded`
-> after each invocation, even if the handler returned immediately.  we add an
-> info message when skipping a system namespace so you can distinguish the two
-> cases.
-You can update the schedule at any time and the timer will pick it up on the
-next interval.
-
-### Opting workloads into scaling
-
-The operator doesn’t touch every resource in a namespace – you **must** mark
-Deployments and StatefulSets you want to control.  Either a **label** or an
-**annotation** with the key `finops-operator/scalable` set to `"true"` will
-work, e.g.:
-
-```sh
-kubectl label deploy my-app finops-operator/scalable=true
-# or equivalently:
-kubectl annotate deploy my-app finops-operator/scalable=true
-```
-
-Since the operator checks both `metadata.labels` and `metadata.annotations`,
-feel free to use whichever fits your workflow.
-
-
-```bash
-# install from local chart directory (replace <version> as needed)
-helm install finops-operator ./helm-chart/finops-k8s-operator \
-  --set image.repository=ghcr.io/ok-karthik/finops-operator \
-  --set image.tag=0.12
-```
-
-The chart creates a ServiceAccount, ClusterRole, ClusterRoleBinding, and
-Deployment. RBAC rules are limited to reading namespaces, listing pods, and
-patching deployments/statefulsets.
-
-## Configuration
+#### Configuration Options
 
 Customize via `values.yaml` or `--set` flags:
 
 | Value                      | Description                         | Default                  |
 |---------------------------|-------------------------------------|--------------------------|
-| `image.repository`        | Container image to run              | `ghcr.io/my-org/finops-operator` |
-| `image.tag`               | Image tag                           | `latest`                 |
+| `image.repository`        | Container image to run              | `ghcr.io/ok-karthik/finops-operator` |
+| `image.tag`               | Image tag                           | `0.12.0`                 |
 | `image.pullPolicy`        | Image pull policy                   | `IfNotPresent`           |
 | `serviceAccount.create`   | Whether to create a SA              | `true`                   |
 | `rbac.create`             | Create RBAC resources               | `true`                   |
 | `annotations`             | Annotations on SA/deployment        | `{}`                     |
 | `scheduleInterval`        | Kopf timer interval (seconds)       | `60`                     |
 
-## Development
+> **RBAC note:** Kopf patches the namespace object when running a timer, so the operator requires `patch` permission on the `namespaces` resource. The supplied Helm chart grants `get,list,watch,patch` for namespaces. 
 
-Run the operator locally with your kubeconfig:
+---
+
+## 👨‍💻 Local Development
+
+Run the operator locally seamlessly. The engine automatically detects the lack of an in-cluster environment and defaults to your local `~/.kube/config`.
 
 ```bash
 pip install -r requirements.txt
 kopf run operator.py --verbose
 ```
 
-Or build-and-push the image and install the chart as above.
+### Note on Naming
+> **Warning**: The entrypoint is named `operator.py`. If you run standard python modules, try not to confuse this with the python built-in `operator` module! Ensure Kopf executes it via standard paths natively.
 
-## Testing
+## 📦 Publishing the Helm Chart
 
-See `tests/` for unit and integration examples (coming soon).
+You can package and publish the chart to an OCI registry (e.g. GitHub Packages):
 
-## Publishing the Helm Chart
-
-You can package and publish the chart to GitHub Pages or an OCI registry:
-
-```bash
 ```bash
 # package locally (will create finops-k8s-operator-<chart-version>.tgz)
 helm package helm-chart/finops-k8s-operator
 
-# to an OCI registry (e.g. GitHub Packages):
+# to an OCI registry:
 helm registry login ghcr.io
-# replace <chart-version> with the version you just packaged
 helm push finops-k8s-operator-<chart-version>.tgz oci://ghcr.io/ok-karthik/helm-charts
 ```
 
-The GitHub Actions workflow included in this repository will take care of
-building the container image and also packaging/pushing the Helm chart when
-you push a tag (e.g. `v0.1.0`). The chart is stored alongside the images in
-the registry under the `helm-charts` path; you can view it in the **Packages**
-tab of your repo or pull it directly:
+The GitHub Actions workflow included in this repository will take care of building the container image and also packaging/pushing the Helm chart when you push a tag (e.g. `v0.12.0`).
 
-```bash
-helm registry login ghcr.io
-helm pull oci://ghcr.io/ok-karthik/helm-charts/finops-operator --version 0.12.0
+## 🤝 Testing & Contributing
 
-The workflow also automatically bumps `Chart.yaml` to match the tag and
-commits that change back to `main` so the repository file stays in sync.
-```
-
-To pull the operator image manually, run:
-
-```bash
-docker pull ghcr.io/ok-karthik/finops-k8s-operator:0.12
-```
-
-And for the Helm chart (OCI registry):
-
-```bash
-docker pull ghcr.io/ok-karthik/helm-charts/finops-k8s-operator:0.12.0
-```
-
-If you prefer to install the chart from the registry instead of a local
-directory:
-
-```bash
-helm registry login ghcr.io
-helm install finops-operator oci://ghcr.io/ok-karthik/helm-charts/finops-operator --version 0.12.0
-```
+See `tests/` for unit and integration examples. Testing framework is currently under active development. Feel free to open a PR!

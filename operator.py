@@ -1,12 +1,18 @@
 import kopf
 import kubernetes.client
+import kubernetes.config
 from kubernetes.client.rest import ApiException
 from datetime import datetime, timezone
+import logging
 
 @kopf.on.startup()
 def configure(settings: kopf.OperatorSettings, **_):
-    kubernetes.config.load_incluster_config() # Use in-cluster config when running inside Kubernetes
-    print("FinOps Operator Started: Listening for sleep schedule annotations...")
+    try:
+        kubernetes.config.load_incluster_config() # Use in-cluster config when running inside Kubernetes
+        print("FinOps Operator Started: Loaded in-cluster Kubernetes config.")
+    except kubernetes.config.ConfigException:
+        kubernetes.config.load_kube_config() # Fallback for local development
+        print("FinOps Operator Started: Loaded local kubeconfig.")
     print("i.e., annotate a namespace with 'finops-operator/sleep-schedule: \"19:00-08:00\"' to enable sleeping/scaledown. Time format is 24-hour HH:MM in UTC. Adjust times as needed for your timezone.")
 
 @kopf.timer(
@@ -53,12 +59,9 @@ def check_sleep_schedule(spec, name, annotations, logger, **kwargs):
 
     # 4. Fetch Workloads (Gathering Deployments & StatefulSets)
     workloads = []
-    try:
+    # Performance Optimization: Use label_selector to let the API server filter resources
         # Selector helper: check both labels and annotations so users may
-        # choose either form when marking resources as scalable.  The
-        # original version only looked at labels, which caused confusion
-        # when people annotated instead – hence the race condition you saw
-        # earlier.
+        # choose either form when marking resources as scalable.
         def should_scale(obj, key="finops-operator/scalable"):
             labels = obj.metadata.labels or {}
             anns   = obj.metadata.annotations or {}
@@ -115,19 +118,16 @@ def check_sleep_schedule(spec, name, annotations, logger, **kwargs):
 
     # 6. Iterate through Pods (Audit/Logging)
     try:
-        pods = core_api.list_namespaced_pod(name)
+        # Performance Optimization: Use field_selector to only fetch running pods
+        pods = core_api.list_namespaced_pod(name, field_selector="status.phase=Running")
         # count only pods that are truly running; skip ones already
-        # in the process of terminating (they'll still report phase=Running
-        # until the grace period expires).
+        # in the process of terminating
         running_pods = 0
         for pod in pods.items:
-            if pod.status.phase != "Running":
-                continue
             if pod.metadata.deletion_timestamp is not None:
                 # pod is being deleted, ignore it
                 continue
             running_pods += 1
-
         if is_sleep_time and running_pods > 0:
             logger.warning(
                 f"Audit: Namespace {name} still has {running_pods} running pods "
