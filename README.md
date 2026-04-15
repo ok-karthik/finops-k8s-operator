@@ -209,11 +209,11 @@ See `tests/` for unit and integration examples. Testing framework is currently u
 Here is an example of what the operator logs look like when a sleep window activates and gracefully scales down workloads (while warning about rogue pods!):
 
 ```text
-[2026-04-15 14:33:52,373] kopf.activities.star [INFO    ] Activity 'configure' succeeded.
-[2026-04-15 14:33:52,373] kopf._core.engines.a [INFO    ] Initial authentication has been initiated.
-[2026-04-15 14:35:44,170] kopf.objects         [INFO    ] [crossplane-system] Sleeping Deployment: crossplane -> 0
-[2026-04-15 14:35:44,192] kopf.objects         [INFO    ] [crossplane-system] Sleeping Deployment: crossplane-rbac-manager -> 0
-[2026-04-15 14:35:44,219] kopf.objects         [INFO    ] [crossplane-system] Sleeping Deployment: upbound-provider-family-aws -> 0
-[2026-04-15 14:35:44,433] kopf.objects         [WARNING ] [crossplane-system] Audit: Namespace crossplane-system still has 1 running pods during sleep window! (Check exclusions or rogue pods)
-[2026-04-15 14:35:44,452] kopf.objects         [INFO    ] [crossplane-system] Timer 'check_sleep_schedule' succeeded.
+[14:33:52,373] kopf.activities.star [INFO    ] Activity 'configure' succeeded.
+[14:33:52,373] kopf._core.engines.a [INFO    ] Initial authentication has been initiated.
+[14:35:44,170] kopf.objects         [INFO    ] [crossplane-system] Sleeping Deployment: crossplane -> 0
+[14:35:44,192] kopf.objects         [INFO    ] [crossplane-system] Sleeping Deployment: crossplane-rbac-manager -> 0
+[14:35:44,219] kopf.objects         [INFO    ] [crossplane-system] Sleeping Deployment: upbound-provider-family-aws -> 0
+[14:35:44,433] kopf.objects         [WARNING ] [crossplane-system] Audit: Namespace crossplane-system still has 1 running pods!
+[14:35:44,452] kopf.objects         [INFO    ] [crossplane-system] Timer 'check_sleep_schedule' succeeded.
 ```
