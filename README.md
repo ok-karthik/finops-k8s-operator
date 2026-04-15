@@ -116,31 +116,37 @@ metadata:
 ### Requirements
 * A Kubernetes Cluster
 * Helm 3.x
-* Docker (for building locally)
 
-### Building the Image
+### Approach 1: Quick Install (Pre-built Public Chart)
+The fastest way to get started is to use the officially published Helm Chart and Docker Image. Because the packages are public, **no login is required**.
 
+<!-- x-release-please-start-version -->
+```bash
+helm install finops-operator oci://ghcr.io/ok-karthik/helm-charts/finops-k8s-operator --version 0.13.0
+```
+<!-- x-release-please-end -->
+
+### Approach 2: Build & Run Locally
+If you wish to fork, develop, and publish the operator to your own internal enterprise registry:
+
+**1. Building the Image**
 <!-- x-release-please-start-version -->
 ```bash
 docker build -t ghcr.io/<your-org>/finops-operator:0.13.0 .
 docker push ghcr.io/<your-org>/finops-operator:0.13.0
 ```
 
-To pull the latest published image:
+To pull the latest published image directly:
 ```bash
 docker pull ghcr.io/ok-karthik/finops-k8s-operator:0.13.0
 ```
 <!-- x-release-please-end -->
 
-### Helm Installation
+**2. Helm Installation (Local Chart Directory)**
 
-You can install the chart directly from the OCI registry:
-<!-- x-release-please-start-version -->
 ```bash
-helm registry login ghcr.io
-helm install finops-operator oci://ghcr.io/ok-karthik/helm-charts/finops-operator --version 0.13.0
+helm install finops-operator ./helm-chart/finops-k8s-operator
 ```
-<!-- x-release-please-end -->
 
 #### Configuration Options
 
