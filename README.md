@@ -224,22 +224,7 @@ Here is an example of what the operator logs look like when a sleep window activ
 
 The operator is designed to be extremely "thrifty," ensuring that the tool you use to save money doesn't cost you money to run.
 
-- **Footprint**: Consumes **< 1m CPU** and **< 100Mi Memory** in a standard production environment with hundreds of workloads.
-- **API Efficiency**: Uses server-side `field_selector` filtering to reduce Kubernetes API traffic and memory overhead.
-
-```bash
-❯ kubectl top pod -n finops-operator
-NAME                               CPU(cores)   MEMORY(bytes)
-finops-operator-7cdb459d66-zxpjj   1m           99Mi
-```
-
----
-
-## ⚡ Performance & Efficiency
-
-The operator is designed to be extremely "thrifty," ensuring that the tool you use to save money doesn't cost you money to run.
-
-- **Footprint**: Consumes **< 1m CPU** and **< 100Mi Memory** in a standard production environment with hundreds of workloads.
+- **Footprint**: Consumes **< 1m CPU** and **< 100Mi Memory** in a standard environment with multiple namespaces and workloads.
 - **API Efficiency**: Uses server-side `field_selector` filtering to reduce Kubernetes API traffic and memory overhead.
 
 ```bash
