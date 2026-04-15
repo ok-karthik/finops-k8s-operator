@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.13.3](https://github.com/ok-karthik/finops-k8s-operator/compare/v0.13.2...v0.13.3) (2026-04-15)
+
+
+### Bug Fixes
+
+* set static appVersion and optimize README log layout ([07d186f](https://github.com/ok-karthik/finops-k8s-operator/commit/07d186f5e40f55514d8f1ca02fe6f8a9f8c4fb3b))
+
 ## [0.13.2](https://github.com/ok-karthik/finops-k8s-operator/compare/v0.13.1...v0.13.2) (2026-04-15)
 
 
