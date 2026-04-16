@@ -1,6 +1,8 @@
 # 🌿 FinOps Kubernetes Operator
 
-![FinOps Kubernetes Operator Hero](assets/finops-operator-hero.png)
+<p align="center">
+  <img src="assets/finops-operator-hero.png" width="500" alt="FinOps Kubernetes Operator Hero">
+</p>
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 [![Python: 3.12](https://img.shields.io/badge/Python-3.12-blue?logo=python&logoColor=white)](https://python.org)
