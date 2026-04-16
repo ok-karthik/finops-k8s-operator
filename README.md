@@ -1,5 +1,7 @@
 # 🌿 FinOps Kubernetes Operator
 
+![FinOps Kubernetes Operator Hero](assets/finops-operator-hero.png)
+
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 [![Python: 3.12](https://img.shields.io/badge/Python-3.12-blue?logo=python&logoColor=white)](https://python.org)
 [![Kubernetes](https://img.shields.io/badge/kubernetes-operator-%23326ce5.svg?logo=kubernetes&logoColor=white)](https://kubernetes.io/)
@@ -217,6 +219,29 @@ Here is an example of what the operator logs look like when a sleep window activ
 [14:35:44,433] kopf.objects         [WARNING ] [crossplane-system] Audit: Namespace crossplane-system still has 1 running pods!
 [14:35:44,452] kopf.objects         [INFO    ] [crossplane-system] Timer 'check_sleep_schedule' succeeded.
 ```
+
+---
+
+## 🌍 Architecture & Ecosystem Integrations
+
+When designing a cloud-native FinOps strategy, this operator is designed to compose beautifully with existing CNCF tools:
+
+### 1. Worker Node Scaling (Real Cost Savings)
+The FinOps Kubernetes Operator scales *workload replicas* to exactly zero. To realize actual cloud bill savings (e.g., EC2/GCE instance costs), you **must pair this operator with an underlying compute autoscaler**. 
+
+This couples perfectly with:
+- [Kubernetes Cluster Autoscaler](https://github.com/kubernetes/autoscaler) or [Karpenter](https://karpenter.sh/) (AWS/AKS).
+- Fully managed node-less control planes like [Amazon EKS Auto Mode](https://docs.aws.amazon.com/eks/latest/userguide/automode.html) or [GKE Autopilot](https://cloud.google.com/kubernetes-engine/docs/concepts/autopilot-overview).
+
+As the FinOps operator gracefully drains the pods at night, the backing autoscaler or control plane will detect the drop in resource requests and safely terminate the empty worker nodes, ceasing your billing.
+
+### 2. KEDA & Event-Driven Autoscaling
+[KEDA](https://keda.sh) is fantastic for dynamic, metric-based scaling (e.g., queue length, HTTP traffic). By contrast, this FinOps operator is designed for **bulk, scheduled time-based scaling**. Instead of managing individual `ScaledObjects` for 50 microservices in a QA cluster, you simply activate the entire Namespace once.
+* **Avoiding Conflicts:** If a Deployment is actively managed by KEDA or a native `HorizontalPodAutoscaler` (HPA), scaling it to zero might cause the HPA to fight the operator and scale it back up. **Best Practice:** Add the `finops-operator/exclude: "true"` annotation to any workloads managed by KEDA/HPA.
+* **Roadmap:** Native integration with KEDA (dynamically injecting the `autoscaling.keda.sh/paused-replicas` annotation during sleep windows) is on the active roadmap!
+
+### 3. Event-Based "Wake on Request"
+The ultimate end-state for lower environments is "wake on request" (zero-to-one scaling). While this operator provides predictable scheduled sleeping (nights/weekends), combining our bulk-sleep architecture with tools like [Knative](https://knative.dev/) or the KEDA HTTP Add-on provides the perfect balance of guaranteed cost savings and seamless developer experience.
 
 ---
 
